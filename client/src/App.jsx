@@ -33,6 +33,8 @@ import Dashboard from "./pages/Dashboard";
 import NoteGenPage from "./pages/NoteGenPage";
 import NotePreview from "./pages/NotePreview";
 import Login from "./pages/Login";
+import AllFiles from "./pages/AllFiles";
+import UploadPdfNotes from "./pages/UploadPdfNotes";
 
 const App = () => {
   return (
@@ -42,6 +44,8 @@ const App = () => {
 
         <Route path="app" element={<Layout />}>
           <Route index element={<Dashboard />} />
+          <Route path="uploadfile" element={<UploadPdfNotes/>} />
+          <Route path="allfiles" element={<AllFiles/>} />
 
           {/* CREATE / EDIT NOTE */}
           <Route path="notegen/:id" element={<NoteGenPage />} />

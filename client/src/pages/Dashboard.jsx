@@ -14,7 +14,7 @@ const Dashboard = () => {
   const colors = ["#9333ea", "#d97706", "#dc2626", "#0284c7", "#16a34a"];
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8">
+    <div className="max-w-7xl w-full mx-auto px-4 py-8">
 
       {/* ACTION BUTTON */}
       <div className="flex gap-4">
