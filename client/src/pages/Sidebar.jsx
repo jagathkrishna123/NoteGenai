@@ -11,7 +11,7 @@ export default function Sidebar() {
   ];
 
   return (
-    <div className="h-screen w-56 bg-slate-200 text-white flex flex-col">
+    <div className="fixed left-0 top-0 h-screen w-56 bg-slate-200 text-white flex flex-col z-10">
       {/* User Profile */}
       <div className="p-6 border-b-2 border-gray-400/40">
         <div className="flex items-center space-x-3">
