@@ -35,6 +35,11 @@ import NotePreview from "./pages/NotePreview";
 import Login from "./pages/Login";
 import AllFiles from "./pages/AllFiles";
 import UploadPdfNotes from "./pages/UploadPdfNotes";
+import AdminLayout from "./pages/admin/AdminLayout";
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import UserManagement from "./pages/admin/UserManagement";
+import Feedback from "./pages/admin/Feedback";
+import Broadcast from "./pages/admin/Broadcast";
 
 const App = () => {
   return (
@@ -52,6 +57,13 @@ const App = () => {
 
           {/* PREVIEW NOTE */}
           <Route path="preview/:id" element={<NotePreview />} />
+        </Route>
+
+        <Route path="admin" element={<AdminLayout />}>
+          <Route index element={<AdminDashboard />} />
+          <Route path="users" element={<UserManagement />} />
+          <Route path="feedback" element={<Feedback />} />
+          <Route path="broadcast" element={<Broadcast />} />
         </Route>
 
         <Route path="login" element={<Login />} />

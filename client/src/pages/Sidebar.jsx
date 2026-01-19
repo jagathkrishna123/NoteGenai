@@ -1,4 +1,5 @@
 import { User, FileText, Upload, FileStack, LogOut } from 'lucide-react';
+import { Bot } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 
 export default function Sidebar() {
@@ -8,6 +9,7 @@ export default function Sidebar() {
     { icon: FileText, label: 'Create Note', path: '/app' },
     { icon: Upload, label: 'Upload Syllabus', path: '/app/uploadfile' },
     { icon: FileStack, label: 'All Files', path: '/app/allfiles' },
+    { icon: Bot, label: 'Chat Bot', path: '/app/chatbot' },
   ];
 
   return (
