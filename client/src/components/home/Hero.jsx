@@ -216,11 +216,11 @@ const Hero = () => {
             </button>
           </div>
 
-          <p className="py-6 text-slate-600 mt-14">
+          {/* <p className="py-6 text-slate-600 mt-14">
             Trusting by leading brands, including
-          </p>
+          </p> */}
 
-          <div
+          {/* <div
             className="flex flex-wrap justify-between max-sm:justify-center gap-6 max-w-3xl w-full mx-auto py-4"
             id="logo-container"
           >
@@ -232,7 +232,7 @@ const Hero = () => {
                 className="h-6 w-auto max-w-xs"
               />
             ))}
-          </div>
+          </div> */}
         </div>
       </div>
       <style>

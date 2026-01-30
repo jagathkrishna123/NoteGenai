@@ -46,7 +46,7 @@ app.post("/api/ai/generate", async (req, res) => {
     const response = await axios.post(
       "https://openrouter.ai/api/v1/chat/completions",
       {
-        model: "kwaipilot/kat-coder-pro:free",
+        model: "deepseek/deepseek-r1-0528:free",
         messages: [
           {
             role: "system",
@@ -70,17 +70,14 @@ Write clear study notes in plain text.
       },
       {
         headers: {
-          Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
+          "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`,
           "Content-Type": "application/json",
-          "HTTP-Referer": "http://localhost:3000",
-          "X-Title": "Question Notes Generator",
         },
-        timeout: 20000, // 20s safety timeout
       }
     );
 
     const answer =
-      response.data?.choices?.[0]?.message?.content ||
+      response.data.choices?.[0]?.message?.content ||
       "No response generated.";
 
     res.json({ answer });
@@ -111,7 +108,7 @@ app.post("/api/ai/generate-bulk", async (req, res) => {
       const response = await axios.post(
         "https://openrouter.ai/api/v1/chat/completions",
         {
-          model: "kwaipilot/kat-coder-pro:free",
+          model: "deepseek/deepseek-r1-0528:free",
           messages: [
             {
               role: "system",
@@ -126,7 +123,7 @@ app.post("/api/ai/generate-bulk", async (req, res) => {
         },
         {
           headers: {
-            Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
+            "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`,
             "Content-Type": "application/json",
           },
         }
@@ -135,7 +132,7 @@ app.post("/api/ai/generate-bulk", async (req, res) => {
       results.push({
         topic,
         answer:
-          response.data?.choices?.[0]?.message?.content ||
+          response.data.choices?.[0]?.message?.content ||
           "No answer generated",
       });
     }
@@ -193,7 +190,7 @@ app.post("/api/ai/generate-questions", async (req, res) => {
     const response = await axios.post(
       "https://openrouter.ai/api/v1/chat/completions",
       {
-        model: "kwaipilot/kat-coder-pro:free",
+        model: "deepseek/deepseek-r1-0528:free",
         messages: [
           {
             role: "system",
@@ -209,16 +206,13 @@ app.post("/api/ai/generate-questions", async (req, res) => {
       },
       {
         headers: {
-          Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
+          "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`,
           "Content-Type": "application/json",
-          "HTTP-Referer": "http://localhost:3000",
-          "X-Title": "Question Paper Generator",
         },
-        timeout: 30000,
       }
     );
 
-    const generatedContent = response.data?.choices?.[0]?.message?.content || "";
+    const generatedContent = response.data.choices?.[0]?.message?.content || "";
 
     // Parse the generated content based on question type
     const questions = parseGeneratedQuestions(generatedContent, questionType);

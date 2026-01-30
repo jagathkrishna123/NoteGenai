@@ -40,6 +40,7 @@ import AdminDashboard from "./pages/admin/AdminDashboard";
 import UserManagement from "./pages/admin/UserManagement";
 import Feedback from "./pages/admin/Feedback";
 import Broadcast from "./pages/admin/Broadcast";
+import ChatBot from "./pages/ChatBot";
 
 const App = () => {
   return (
@@ -51,6 +52,7 @@ const App = () => {
           <Route index element={<Dashboard />} />
           <Route path="uploadfile" element={<UploadPdfNotes/>} />
           <Route path="allfiles" element={<AllFiles/>} />
+          <Route path="chatbot" element={<ChatBot/>} />
 
           {/* CREATE / EDIT NOTE */}
           <Route path="notegen/:id" element={<NoteGenPage />} />
