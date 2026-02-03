@@ -202,6 +202,7 @@ import * as pdfjsLib from "pdfjs-dist";
 import jsPDF from "jspdf";
 import { OutfitRegular } from "../fonts/outfitFonts";
 import { Plus, Trash2, Download, FileText, Key, BookOpen } from "lucide-react";
+import { useNotes } from "../context/NotesContext";
 
 import workerSrc from "pdfjs-dist/legacy/build/pdf.worker.min.js?url";
 
@@ -226,6 +227,7 @@ const QUESTION_TYPES = {
 };
 
 const UploadPdfNotes = () => {
+  const { token } = useNotes();
   const [inputType, setInputType] = useState("file"); // 'file' or 'text'
   const [manualSyllabus, setManualSyllabus] = useState("");
   const [headerDetails, setHeaderDetails] = useState({
@@ -346,7 +348,10 @@ const UploadPdfNotes = () => {
       try {
         const res = await fetch("http://localhost:5000/api/ai/generate-questions", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+          },
           body: JSON.stringify({
             topics: topics.slice(0, section.numQuestions),
             questionType: section.questionType,

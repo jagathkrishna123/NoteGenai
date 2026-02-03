@@ -9,7 +9,7 @@ import { useNotes } from "../context/NotesContext";
 const NoteGenPage = () => {
   const { id } = useParams(); // "new" or note id
   const navigate = useNavigate();
-  const { notes, addNote, updateNote } = useNotes();
+  const { notes, addNote, updateNote, token } = useNotes();
 
   const [noteTitle, setNoteTitle] = useState("");
   const [sections, setSections] = useState([
@@ -63,7 +63,10 @@ const NoteGenPage = () => {
 
       const res = await fetch("http://localhost:5000/api/ai/generate", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
         body: JSON.stringify({
           topic,
           length: answerLength,
@@ -84,21 +87,25 @@ const NoteGenPage = () => {
   };
 
   /* 🔹 Save note to global state */
-  const saveNote = () => {
+  const saveNote = async () => {
     const noteData = {
-      id: id === "new" ? crypto.randomUUID() : id,
+      id: id === "new" ? undefined : id, // Backend will provide id for 'new'
       title: noteTitle || "Untitled Note",
       sections,
-      createdAt: id === "new" ? new Date().toISOString() : undefined,
       updatedAt: new Date().toISOString(),
     };
 
-    id === "new" ? addNote(noteData) : updateNote(noteData);
-    return noteData.id;
+    if (id === "new") {
+      const newNote = await addNote(noteData);
+      return newNote?.id;
+    } else {
+      await updateNote({ ...noteData, id });
+      return id;
+    }
   };
 
   /* 🔹 Generate PDF + Save note */
-  const generatePDF = () => {
+  const generatePDF = async () => {
     const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
 
     pdf.addFileToVFS("Outfit-Regular.ttf", OutfitRegular);
@@ -146,8 +153,10 @@ const NoteGenPage = () => {
 
     pdf.save("notes.pdf");
 
-    const savedId = saveNote();
-    navigate(`/app/preview/${savedId}`);
+    const savedId = await saveNote();
+    if (savedId) {
+      navigate(`/app/preview/${savedId}`);
+    }
   };
 
   return (

@@ -3,46 +3,45 @@ import { Send, Bot, User, Loader2 } from 'lucide-react';
 import { useNotes } from '../context/NotesContext';
 
 const ChatBot = () => {
-  const { userId } = useNotes();
+  const { userId, token } = useNotes();
   const [messages, setMessages] = useState([]);
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef(null);
 
-  // Load messages when userId changes
+  // Load messages when token changes
   useEffect(() => {
-    if (userId) {
-      const allChats = JSON.parse(localStorage.getItem('chatHistory') || '{}');
-      const userChats = allChats[userId] || [];
-
-      // If no chats exist for this user, provide a welcome message
-      if (userChats.length === 0) {
-        // Fetch user name for welcome message
-        const currentUser = JSON.parse(localStorage.getItem('currentUser'));
-        const welcomeMessage = {
-          id: Date.now(),
-          type: 'ai',
-          content: `Hello ${currentUser?.name || 'there'}! I'm your AI assistant. I can help you with questions about any topic - science, technology, programming, history, mathematics, or general knowledge. What would you like to know?`,
-          timestamp: new Date().toISOString()
-        };
-        setMessages([welcomeMessage]);
-      } else {
-        setMessages(userChats);
-      }
+    if (token) {
+      const fetchChatHistory = async () => {
+        try {
+          const response = await fetch('http://localhost:5000/api/chat', {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (response.ok) {
+            const history = await response.json();
+            if (history.length === 0) {
+              // Fetch user name for welcome message
+              const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+              const welcomeMessage = {
+                id: Date.now(),
+                type: 'ai',
+                content: `Hello ${currentUser?.name || 'there'}! I'm your AI assistant. I can help you with questions about any topic - science, technology, programming, history, mathematics, or general knowledge. What would you like to know?`,
+                timestamp: new Date().toISOString()
+              };
+              setMessages([welcomeMessage]);
+            } else {
+              setMessages(history);
+            }
+          }
+        } catch (error) {
+          console.error('Failed to fetch chat history:', error);
+        }
+      };
+      fetchChatHistory();
     } else {
-      // Clear messages if no user is logged in (isolation)
       setMessages([]);
     }
-  }, [userId]);
-
-  // Persist messages when they change
-  useEffect(() => {
-    if (userId && messages.length > 0) {
-      const allChats = JSON.parse(localStorage.getItem('chatHistory') || '{}');
-      allChats[userId] = messages;
-      localStorage.setItem('chatHistory', JSON.stringify(allChats));
-    }
-  }, [messages, userId]);
+  }, [token]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -55,59 +54,79 @@ const ChatBot = () => {
   const handleSendMessage = async (e) => {
     e.preventDefault();
 
-    if (!inputMessage.trim() || isLoading) return;
+    if (!inputMessage.trim() || isLoading || !token) return;
 
     const userMessage = {
-      id: messages.length + 1,
       type: 'user',
-      content: inputMessage.trim(),
-      timestamp: new Date().toISOString()
+      content: inputMessage.trim()
     };
 
-    setMessages(prev => [...prev, userMessage]);
+    // Optimistically update UI
+    const tempUserMsg = { ...userMessage, id: Date.now(), timestamp: new Date().toISOString() };
+    setMessages(prev => [...prev, tempUserMsg]);
     setInputMessage('');
     setIsLoading(true);
 
     try {
+      // 1. Save User Message to Backend
+      await fetch('http://localhost:5000/api/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(userMessage)
+      });
+
+      // 2. Get AI Response (Redirected to the correct AI route)
       const conversation = messages.map(msg => ({
         role: msg.type === 'user' ? 'user' : 'assistant',
         content: msg.content
       }));
 
-      const response = await fetch('http://localhost:5000/api/chat', {
+      const response = await fetch('http://localhost:5000/api/ai/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
-          message: inputMessage.trim(),
+          message: userMessage.content,
           conversation: conversation
         }),
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to get response');
-      }
+      if (!response.ok) throw new Error('Failed to get AI response');
 
       const data = await response.json();
 
       const aiMessage = {
-        id: messages.length + 2,
         type: 'ai',
-        content: data.response,
-        timestamp: new Date().toISOString()
+        content: data.response
       };
 
-      setMessages(prev => [...prev, aiMessage]);
+      // 3. Save AI Message to Backend
+      const saveResponse = await fetch('http://localhost:5000/api/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(aiMessage)
+      });
+
+      if (saveResponse.ok) {
+        const savedAiMsg = await saveResponse.json();
+        setMessages(prev => [...prev, savedAiMsg]);
+      }
     } catch (error) {
       console.error('Chat error:', error);
-      const errorMessage = {
-        id: messages.length + 2,
+      setMessages(prev => [...prev, {
+        id: Date.now(),
         type: 'ai',
         content: 'Sorry, I encountered an error. Please try again.',
         timestamp: new Date().toISOString()
-      };
-      setMessages(prev => [...prev, errorMessage]);
+      }]);
     } finally {
       setIsLoading(false);
     }

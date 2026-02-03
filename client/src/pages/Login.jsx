@@ -25,7 +25,7 @@ const Login = () => {
     const handleSubmit = async (e) => {
         e.preventDefault()
 
-        // Admin Login Check
+        // Admin Login Check (Legacy)
         if (formData.email === 'admin@gmail.com' && formData.password === 'admin123') {
             const adminUser = { name: 'Admin', email: 'admin@gmail.com', id: 'admin', role: 'admin' }
             localStorage.setItem('currentUser', JSON.stringify(adminUser))
@@ -34,29 +34,40 @@ const Login = () => {
             return
         }
 
-        const users = JSON.parse(localStorage.getItem('users') || '[]')
+        try {
+            const endpoint = state === 'register' ? '/api/auth/register' : '/api/auth/login';
+            const response = await fetch(`http://localhost:5000${endpoint}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(formData)
+            });
 
-        if (state === 'register') {
-            const userExists = users.find(u => u.email === formData.email)
-            if (userExists) {
-                alert('User already exists')
-                return
+            const data = await response.json();
+
+            if (!response.ok) {
+                alert(data.error || 'Authentication failed');
+                return;
             }
-            const newUser = { ...formData, id: Date.now() }
-            users.push(newUser)
-            localStorage.setItem('users', JSON.stringify(users))
-            localStorage.setItem('currentUser', JSON.stringify(newUser))
-            refreshUser()
-            navigate('/app')
-        } else {
-            const user = users.find(u => u.email === formData.email && u.password === formData.password)
-            if (user) {
-                localStorage.setItem('currentUser', JSON.stringify(user))
-                refreshUser()
-                navigate('/app')
+
+            if (state === 'register') {
+                // After successful registration, automatically login
+                setState('login');
+                alert('Registration successful! Please login.');
             } else {
-                alert('Invalid credentials')
+                // Successful login
+                const userWithToken = {
+                    ...data.user,
+                    token: data.token
+                };
+                localStorage.setItem('currentUser', JSON.stringify(userWithToken));
+                refreshUser();
+                navigate('/app');
             }
+        } catch (error) {
+            console.error('Auth error:', error);
+            alert('Something went wrong. Please try again.');
         }
     }
 
