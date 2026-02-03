@@ -35,7 +35,7 @@ const Dashboard = () => {
   <div className="flex items-center justify-center size-10 rounded-full bg-slate-500 text-slate-100">
     <PlusIcon className="size-5" />
   </div>
-  <p className="text-sm font-medium">Create Note</p>
+  <p className="text-sm font-medium">Create Notex</p>
 </button>
 
 

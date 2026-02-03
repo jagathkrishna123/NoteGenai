@@ -40,12 +40,12 @@ const Hero = () => {
           </div>
 
           <div className="flex gap-2">
-            <Link to='/app?state=register'
+            <Link to='/login?state=register'
               className="hidden md:block px-6 py-2 bg-green-500 hover:bg-green-700 active:scale-95 transition-all rounded-full text-white"
             >
               Get started
             </Link>
-            <Link to='/app?state=login'
+            <Link to='/login?state=login'
               className="hidden md:block px-6 py-2 border active:scale-95 hover:bg-slate-50 transition-all rounded-full text-slate-700 hover:text-slate-900"
             >
               Login
@@ -72,9 +72,8 @@ const Hero = () => {
 
         {/* Mobile Menu */}
         <div
-          className={`fixed inset-0 z-[100] bg-black/40 text-black backdrop-blur flex flex-col items-center justify-center text-lg gap-8 md:hidden transition-transform duration-300 ${
-            menuOpen ? "translate-x-0" : "-translate-x-full"
-          }`}
+          className={`fixed inset-0 z-[100] bg-black/40 text-black backdrop-blur flex flex-col items-center justify-center text-lg gap-8 md:hidden transition-transform duration-300 ${menuOpen ? "translate-x-0" : "-translate-x-full"
+            }`}
         >
           <a href="#" className="text-white">
             Home
@@ -168,13 +167,13 @@ const Hero = () => {
 
           <p className="max-w-2xl text-center text-base my-7">
             Upload your syllabus and let AI generate notes, summaries, and
-          questions.Everything is organized and easy to understand. Study
-          smarter with instant.
+            questions.Everything is organized and easy to understand. Study
+            smarter with instant.
           </p>
 
           {/* CTA Buttons */}
           <div className="flex items-center gap-4 ">
-            <Link to='/app'
+            <Link to='/login?state=register'
               className="bg-green-500 hover:bg-green-600 text-white rounded-full px-9 h-12 m-1 ring-offset-2 ring-1 ring-green-400 flex items-center transition-colors"
             >
               Get started

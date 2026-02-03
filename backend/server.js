@@ -18,7 +18,7 @@ app.get("/", (req, res) => {
 app.post("/api/ai/generate", async (req, res) => {
   const { topic, length = "short", level = "easy" } = req.body;
   console.log("hello");
-  
+
 
   if (!topic) {
     return res.status(400).json({ error: "Topic is required" });
@@ -147,7 +147,7 @@ app.post("/api/ai/generate-bulk", async (req, res) => {
 app.post("/api/ai/generate-questions", async (req, res) => {
   const { topics, questionType, bloomsLevel, numQuestions, marks, syllabusText } = req.body;
   console.log("heloo");
-  
+
 
   if (!Array.isArray(topics) || topics.length === 0) {
     return res.status(400).json({ error: "Topics are required" });
@@ -322,6 +322,54 @@ function parseGeneratedQuestions(content, questionType) {
 
   return questions;
 }
+
+app.post("/api/chat", async (req, res) => {
+  const { message, conversation = [] } = req.body;
+
+  if (!message) {
+    return res.status(400).json({ error: "Message is required" });
+  }
+
+  try {
+    const response = await axios.post(
+      "https://openrouter.ai/api/v1/chat/completions",
+      {
+        model: "deepseek/deepseek-r1-0528:free",
+        messages: [
+          {
+            role: "system",
+            content: "You are a helpful AI assistant. Write clean plain text only. Do not use markdown, headings, bullet points, stars, hashes, or symbols.Respond using normal sentences and paragraphs only.",
+          },
+          ...conversation,
+          {
+            role: "user",
+            content: message,
+          },
+        ],
+        temperature: 0.7,
+        max_tokens: 1000,
+      },
+      {
+        headers: {
+          "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    const aiResponse =
+      response.data.choices?.[0]?.message?.content ||
+      "Sorry, I couldn't generate a response right now.";
+
+    res.json({ response: aiResponse });
+  } catch (error) {
+    console.error("Chat Error:", error.response?.data || error.message);
+    res.status(500).json({
+      error: "Chat failed",
+      details: error.message
+    });
+  }
+});
 
 console.log("Starting server...");
 console.log(`PORT: ${PORT}`);
