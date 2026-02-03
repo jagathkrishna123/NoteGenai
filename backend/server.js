@@ -146,7 +146,7 @@ app.post("/api/ai/generate-bulk", async (req, res) => {
 
 app.post("/api/ai/generate-questions", async (req, res) => {
   const { topics, questionType, bloomsLevel, numQuestions, marks, syllabusText } = req.body;
-  console.log("heloo");
+  // console.log("heloo");
 
 
   if (!Array.isArray(topics) || topics.length === 0) {

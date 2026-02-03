@@ -232,7 +232,8 @@ const UploadPdfNotes = () => {
     collegeName: "",
     examName: "",
     subjectName: "",
-    year: ""
+    year: "",
+    duration: ""
   });
   const [rawText, setRawText] = useState("");
   const [topics, setTopics] = useState([]);
@@ -305,7 +306,7 @@ const UploadPdfNotes = () => {
       id: Date.now(),
       name: `Section ${paperStructure.length + 1}`,
       questionType: "mcq",
-      bloomsLevel: "remembering",
+      bloomsLevel: ["remembering"],
       numQuestions: 5,
       marksPerQuestion: 1,
       totalMarks: 5
@@ -349,7 +350,7 @@ const UploadPdfNotes = () => {
           body: JSON.stringify({
             topics: topics.slice(0, section.numQuestions),
             questionType: section.questionType,
-            bloomsLevel: section.bloomsLevel,
+            bloomsLevel: Array.isArray(section.bloomsLevel) ? section.bloomsLevel.join(", ") : section.bloomsLevel,
             numQuestions: section.numQuestions,
             marks: section.marksPerQuestion,
             syllabusText: rawText // Pass the full syllabus text to AI
@@ -357,6 +358,7 @@ const UploadPdfNotes = () => {
         });
 
         const data = await res.json();
+        console.log("AI RESPONSE:", data);
 
         generated.push({
           section: section.name,
@@ -456,10 +458,13 @@ const UploadPdfNotes = () => {
       y += 10;
     }
 
-    // Subject Name (Left) and Marks (Right)
+    // Subject Name (Left), Duration (Center) and Marks (Right)
     pdf.setFontSize(12);
     if (headerDetails.subjectName) {
       pdf.text(`Subject: ${headerDetails.subjectName}`, 15, y);
+    }
+    if (headerDetails.duration) {
+      pdf.text(`Duration: ${headerDetails.duration}`, 105, y, { align: "center" });
     }
     pdf.text(`Total Marks: ${totalMarks}`, 195, y, { align: "right" });
     y += 8;
@@ -479,7 +484,10 @@ const UploadPdfNotes = () => {
     const instructions = [
       "1. All questions are compulsory.",
       "2. The question paper consists of " + paperStructure.length + " sections.",
-      "3. Use of calculators is " + (paperStructure.some(s => s.bloomsLevel === 'applying' || s.bloomsLevel === 'analyzing') ? "permitted for complex calculations." : "not permitted."),
+      "3. Use of calculators is " + (paperStructure.some(s => {
+        const levels = Array.isArray(s.bloomsLevel) ? s.bloomsLevel : [s.bloomsLevel];
+        return levels.some(l => l === 'applying' || l === 'analyzing');
+      }) ? "permitted for complex calculations." : "not permitted."),
       "4. Figures to the right indicate full marks."
     ];
     instructions.forEach(inst => {
@@ -500,7 +508,9 @@ const UploadPdfNotes = () => {
       // Section Header (Centered Box)
       pdf.setFontSize(12);
       pdf.setFont("Outfit", "bold");
-      const sectionTitle = `${section.section.toUpperCase()} (${BLOOMS_LEVELS[section.bloomsLevel] || section.bloomsLevel})`;
+      const currentLevels = Array.isArray(section.bloomsLevel) ? section.bloomsLevel : [section.bloomsLevel];
+      const levelsLabel = currentLevels.map(l => BLOOMS_LEVELS[l] || l).join(", ");
+      const sectionTitle = `${section.section.toUpperCase()} (${levelsLabel})`;
       const titleWidth = pdf.getTextWidth(sectionTitle);
       pdf.rect(105 - (titleWidth / 2) - 5, y - 5, titleWidth + 10, 8);
       pdf.text(sectionTitle, 105, y, { align: "center" });
@@ -682,6 +692,16 @@ const UploadPdfNotes = () => {
               className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
             />
           </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Examination Duration</label>
+            <input
+              type="text"
+              value={headerDetails.duration}
+              onChange={(e) => setHeaderDetails({ ...headerDetails, duration: e.target.value })}
+              placeholder="e.g., 3 Hours"
+              className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+            />
+          </div>
         </div>
       </div>
 
@@ -747,16 +767,26 @@ const UploadPdfNotes = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium mb-1 text-gray-600">Bloom's Level</label>
-                  <select
-                    value={section.bloomsLevel}
-                    onChange={(e) => updateSection(section.id, 'bloomsLevel', e.target.value)}
-                    className="w-full px-3 py-2 border-2 border-gray-300 text-gray-700 rounded outline-none"
-                  >
+                  <label className="block text-sm font-medium mb-3 text-gray-600">Bloom's Levels</label>
+                  <div className="grid grid-cols-2 gap-2">
                     {Object.entries(BLOOMS_LEVELS).map(([key, label]) => (
-                      <option key={key} value={key}>{label}</option>
+                      <label key={key} className="flex items-center gap-2 cursor-pointer p-1.5 hover:bg-white rounded transition-colors group">
+                        <input
+                          type="checkbox"
+                          checked={Array.isArray(section.bloomsLevel) ? section.bloomsLevel.includes(key) : section.bloomsLevel === key}
+                          onChange={(e) => {
+                            const currentLevels = Array.isArray(section.bloomsLevel) ? section.bloomsLevel : [section.bloomsLevel];
+                            const newLevels = e.target.checked
+                              ? [...currentLevels, key]
+                              : currentLevels.filter(l => l !== key);
+                            updateSection(section.id, 'bloomsLevel', newLevels.length > 0 ? newLevels : ['remembering']);
+                          }}
+                          className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                        />
+                        <span className="text-xs text-gray-600 group-hover:text-blue-600 transition-colors">{label}</span>
+                      </label>
                     ))}
-                  </select>
+                  </div>
                 </div>
 
                 <div className="flex gap-2">
@@ -870,11 +900,11 @@ const UploadPdfNotes = () => {
 
           <div className="space-y-6 max-h-[70vh] overflow-y-auto">
             {generatedQuestions.map((section, sectionIndex) => (
-              <div key={sectionIndex} className="border rounded-lg p-4">
-                <h3 className="font-semibold text-lg mb-3">
+              <div key={sectionIndex} className="border-2 border-gray-300 rounded-lg p-4">
+                <h3 className="font-semibold text-lg mb-3 text-gray-700">
                   {section.section} - {QUESTION_TYPES[section.questionType]}
                   <span className="text-sm text-gray-600 ml-2">
-                    ({BLOOMS_LEVELS[section.bloomsLevel]})
+                    ({Array.isArray(section.bloomsLevel) ? section.bloomsLevel.map(l => BLOOMS_LEVELS[l]).join(", ") : BLOOMS_LEVELS[section.bloomsLevel]})
                   </span>
                 </h3>
 
