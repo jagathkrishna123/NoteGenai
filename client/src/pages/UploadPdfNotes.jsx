@@ -358,7 +358,7 @@ const UploadPdfNotes = () => {
         });
 
         const data = await res.json();
-        console.log("AI RESPONSE:", data);
+        // console.log("AI RESPONSE:", data);
 
         generated.push({
           section: section.name,

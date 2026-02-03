@@ -1,30 +1,39 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, Bot, User, Loader2 } from 'lucide-react';
+import { useNotes } from '../context/NotesContext';
 
 const ChatBot = () => {
+  const { userId } = useNotes();
   const [messages, setMessages] = useState([]);
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [userId, setUserId] = useState(null);
   const messagesEndRef = useRef(null);
 
-  // Get current user and load messages
+  // Load messages when userId changes
   useEffect(() => {
-    const currentUser = JSON.parse(localStorage.getItem('currentUser'));
-    if (currentUser) {
-      setUserId(currentUser.id);
+    if (userId) {
       const allChats = JSON.parse(localStorage.getItem('chatHistory') || '{}');
-      const userChats = allChats[currentUser.id] || [
-        {
-          id: 1,
+      const userChats = allChats[userId] || [];
+
+      // If no chats exist for this user, provide a welcome message
+      if (userChats.length === 0) {
+        // Fetch user name for welcome message
+        const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+        const welcomeMessage = {
+          id: Date.now(),
           type: 'ai',
-          content: `Hello ${currentUser.name}! I'm your AI assistant. I can help you with questions about any topic - science, technology, programming, history, mathematics, or general knowledge. What would you like to know?`,
+          content: `Hello ${currentUser?.name || 'there'}! I'm your AI assistant. I can help you with questions about any topic - science, technology, programming, history, mathematics, or general knowledge. What would you like to know?`,
           timestamp: new Date().toISOString()
-        }
-      ];
-      setMessages(userChats);
+        };
+        setMessages([welcomeMessage]);
+      } else {
+        setMessages(userChats);
+      }
+    } else {
+      // Clear messages if no user is logged in (isolation)
+      setMessages([]);
     }
-  }, []);
+  }, [userId]);
 
   // Persist messages when they change
   useEffect(() => {

@@ -182,9 +182,43 @@ app.post("/api/ai/generate-questions", async (req, res) => {
     long: `Generate long answer questions requiring detailed explanations. Format: Question|Detailed Answer`
   };
 
-  const systemPrompt = `You are an expert question paper generator. Based on the syllabus content provided, generate ${numQuestions} ${questionTypeInstructions[questionType]} following Bloom's taxonomy level: ${bloomsInstructions[bloomsLevel]}. Each question should be worth ${marks} marks. Use the provided topics as the basis for questions. Return questions in plain text format without markdown.`;
+  // const systemPrompt = `You are an expert question paper generator. Based on the syllabus content provided, generate ${numQuestions} ${questionTypeInstructions[questionType]} following Bloom's taxonomy level: ${bloomsInstructions[bloomsLevel]}. Each question should be worth ${marks} marks. Use the provided topics as the basis for questions. Return questions in plain text format without markdown.`;
+  const systemPrompt = `
+You are an expert question paper generator.
 
-  const userPrompt = `Syllabus Content:\n${syllabusText}\n\nTopics to generate questions from:\n${topics.join('\n')}\n\nGenerate ${numQuestions} questions following the specified format.`;
+You MUST return ONLY valid JSON.
+DO NOT include explanations, markdown, or extra text.
+
+JSON FORMAT (must be followed strictly):
+
+{
+  "questions": [
+    {
+      "question": "string",
+      "options": ["A", "B", "C", "D"],   // only for mcq
+      "correctAnswer": "A",            // only for mcq
+      "answer": "string"               // for objective/short/long
+    }
+  ]
+}
+
+Rules:
+- Generate exactly ${numQuestions} questions
+- Follow Bloom's taxonomy: ${bloomsInstructions[bloomsLevel]}
+- Question type: ${questionType}
+- Marks per question: ${marks}
+`;
+
+
+  // const userPrompt = `Syllabus Content:\n${syllabusText}\n\nTopics to generate questions from:\n${topics.join('\n')}\n\nGenerate ${numQuestions} questions following the specified format.`;
+
+  const userPrompt = `
+Topics:
+${topics.join("\n")}
+
+Generate questions strictly in the JSON format.
+`;
+
 
   try {
     const response = await axios.post(
@@ -212,12 +246,34 @@ app.post("/api/ai/generate-questions", async (req, res) => {
       }
     );
 
-    const generatedContent = response.data.choices?.[0]?.message?.content || "";
+    // const generatedContent = response.data.choices?.[0]?.message?.content || "";
 
-    // Parse the generated content based on question type
-    const questions = parseGeneratedQuestions(generatedContent, questionType);
+    // // Parse the generated content based on question type
+    // const questions = parseGeneratedQuestions(generatedContent, questionType);
 
-    res.json({ questions });
+    // res.json({ questions });
+
+    const generatedContent =
+      response.data.choices?.[0]?.message?.content || "{}";
+
+    let parsed;
+    try {
+      parsed = JSON.parse(generatedContent);
+    } catch (e) {
+      console.error("JSON parse failed:", generatedContent);
+      return res.json({
+        questions: generateMockQuestions(questionType, numQuestions, topics)
+      });
+    }
+
+    if (!Array.isArray(parsed.questions) || parsed.questions.length === 0) {
+      return res.json({
+        questions: generateMockQuestions(questionType, numQuestions, topics)
+      });
+    }
+
+    res.json({ questions: parsed.questions });
+
   } catch (error) {
     console.error("AI Error:", error.response?.data || error.message);
     res.status(500).json({
@@ -271,57 +327,57 @@ function generateMockQuestions(questionType, numQuestions, topics) {
   return questions;
 }
 
-// Helper function to parse generated questions
-function parseGeneratedQuestions(content, questionType) {
-  const questions = [];
-  const lines = content.split('\n').filter(line => line.trim());
+// // Helper function to parse generated questions
+// function parseGeneratedQuestions(content, questionType) {
+//   const questions = [];
+//   const lines = content.split('\n').filter(line => line.trim());
 
-  if (questionType === 'mcq') {
-    // Parse MCQ format: Question|Option A|Option B|Option C|Option D|Correct Answer
-    lines.forEach((line, index) => {
-      const parts = line.split('|').map(p => p.trim());
-      if (parts.length >= 6) {
-        questions.push({
-          question: parts[0],
-          options: {
-            A: parts[1],
-            B: parts[2],
-            C: parts[3],
-            D: parts[4]
-          },
-          correctAnswer: parts[5],
-          type: 'mcq'
-        });
-      }
-    });
-  } else if (questionType === 'objective') {
-    // Parse objective format: Question|Answer
-    lines.forEach((line, index) => {
-      const parts = line.split('|').map(p => p.trim());
-      if (parts.length >= 2) {
-        questions.push({
-          question: parts[0],
-          answer: parts[1],
-          type: 'objective'
-        });
-      }
-    });
-  } else if (questionType === 'short' || questionType === 'long') {
-    // Parse short/long answer format: Question|Answer
-    lines.forEach((line, index) => {
-      const parts = line.split('|').map(p => p.trim());
-      if (parts.length >= 2) {
-        questions.push({
-          question: parts[0],
-          answer: parts[1],
-          type: questionType
-        });
-      }
-    });
-  }
+//   if (questionType === 'mcq') {
+//     // Parse MCQ format: Question|Option A|Option B|Option C|Option D|Correct Answer
+//     lines.forEach((line, index) => {
+//       const parts = line.split('|').map(p => p.trim());
+//       if (parts.length >= 6) {
+//         questions.push({
+//           question: parts[0],
+//           options: {
+//             A: parts[1],
+//             B: parts[2],
+//             C: parts[3],
+//             D: parts[4]
+//           },
+//           correctAnswer: parts[5],
+//           type: 'mcq'
+//         });
+//       }
+//     });
+//   } else if (questionType === 'objective') {
+//     // Parse objective format: Question|Answer
+//     lines.forEach((line, index) => {
+//       const parts = line.split('|').map(p => p.trim());
+//       if (parts.length >= 2) {
+//         questions.push({
+//           question: parts[0],
+//           answer: parts[1],
+//           type: 'objective'
+//         });
+//       }
+//     });
+//   } else if (questionType === 'short' || questionType === 'long') {
+//     // Parse short/long answer format: Question|Answer
+//     lines.forEach((line, index) => {
+//       const parts = line.split('|').map(p => p.trim());
+//       if (parts.length >= 2) {
+//         questions.push({
+//           question: parts[0],
+//           answer: parts[1],
+//           type: questionType
+//         });
+//       }
+//     });
+//   }
 
-  return questions;
-}
+//   return questions;
+// }
 
 app.post("/api/chat", async (req, res) => {
   const { message, conversation = [] } = req.body;
@@ -338,7 +394,7 @@ app.post("/api/chat", async (req, res) => {
         messages: [
           {
             role: "system",
-            content: "You are a helpful AI assistant. Write clean plain text only. Do not use markdown, headings, bullet points, stars, hashes, or symbols.Respond using normal sentences and paragraphs only.",
+            content: "You are a helpful AI assistant.Respond clearly in plain text paragraphs.Avoid markdown formatting.",
           },
           ...conversation,
           {
@@ -357,8 +413,23 @@ app.post("/api/chat", async (req, res) => {
       }
     );
 
+    // const aiResponse =
+    //   response.data.choices?.[0]?.message?.content ||
+    //   "Sorry, I couldn't generate a response right now.";
+
+    if (!response.data.choices || response.data.choices.length === 0) {
+      return res.json({
+        response: "AI is temporarily unavailable. Please try again."
+      });
+    }
+
+
+
+    const msg = response.data.choices?.[0]?.message;
+
     const aiResponse =
-      response.data.choices?.[0]?.message?.content ||
+      msg?.content ||
+      msg?.reasoning ||
       "Sorry, I couldn't generate a response right now.";
 
     res.json({ response: aiResponse });

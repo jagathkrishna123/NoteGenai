@@ -1,21 +1,37 @@
 import React, { useState, useEffect } from 'react';
-import { Bell, Calendar, Info, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Bell, Calendar, Info, AlertCircle, CheckCircle2, Trash2 } from 'lucide-react';
 
 const Notification = () => {
     const [notifications, setNotifications] = useState([]);
+    const [userId, setUserId] = useState(null);
 
     useEffect(() => {
         const currentUser = JSON.parse(localStorage.getItem('currentUser'));
-        const broadcasts = JSON.parse(localStorage.getItem('broadcasts') || '[]');
-
         if (currentUser) {
-            // Filter broadcasts: either 'all' or specifically targeted to this user
-            const filtered = broadcasts.filter(b =>
-                b.type === 'all' || (b.targetUserIds && b.targetUserIds.includes(currentUser.id))
-            );
-            setNotifications(filtered);
+            setUserId(currentUser.id);
+            refreshNotifications(currentUser.id);
         }
     }, []);
+
+    const refreshNotifications = (currentUserId) => {
+        const broadcasts = JSON.parse(localStorage.getItem('broadcasts') || '[]');
+        const deletedIds = JSON.parse(localStorage.getItem(`deletedNotifications_${currentUserId}`) || '[]');
+
+        const filtered = broadcasts.filter(b => {
+            const isTargeted = b.type === 'all' || (b.targetUserIds && b.targetUserIds.includes(currentUserId));
+            const isNotDeleted = !deletedIds.includes(b.id);
+            return isTargeted && isNotDeleted;
+        });
+        setNotifications(filtered);
+    };
+
+    const handleDelete = (noteId) => {
+        if (!userId) return;
+        const deletedIds = JSON.parse(localStorage.getItem(`deletedNotifications_${userId}`) || '[]');
+        const updatedDeleted = [...deletedIds, noteId];
+        localStorage.setItem(`deletedNotifications_${userId}`, JSON.stringify(updatedDeleted));
+        refreshNotifications(userId);
+    };
 
     return (
         <div className="p-8 max-w-4xl mx-auto">
@@ -35,7 +51,7 @@ const Notification = () => {
                         <div key={note.id} className="bg-white border border-gray-100 rounded-xl shadow-sm hover:shadow-md transition-shadow p-6">
                             <div className="flex items-start gap-4">
                                 <div className={`p-2 rounded-lg ${note.subject.toLowerCase().includes('maintenance') ? 'bg-orange-100 text-orange-600' :
-                                        note.subject.toLowerCase().includes('new') ? 'bg-green-100 text-green-600' : 'bg-blue-100 text-blue-600'
+                                    note.subject.toLowerCase().includes('new') ? 'bg-green-100 text-green-600' : 'bg-blue-100 text-blue-600'
                                     }`}>
                                     {note.subject.toLowerCase().includes('maintenance') ? <AlertCircle className="w-5 h-5" /> :
                                         note.subject.toLowerCase().includes('new') ? <CheckCircle2 className="w-5 h-5" /> : <Info className="w-5 h-5" />}
@@ -43,9 +59,18 @@ const Notification = () => {
                                 <div className="flex-1">
                                     <div className="flex items-center justify-between mb-2">
                                         <h3 className="font-bold text-gray-900 text-lg">{note.subject}</h3>
-                                        <div className="flex items-center text-xs text-gray-400">
-                                            <Calendar className="w-3.5 h-3.5 mr-1" />
-                                            {note.sentAt}
+                                        <div className="flex items-center gap-3">
+                                            <div className="flex items-center text-xs text-gray-400">
+                                                <Calendar className="w-3.5 h-3.5 mr-1" />
+                                                {note.sentAt}
+                                            </div>
+                                            <button
+                                                onClick={() => handleDelete(note.id)}
+                                                className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                                title="Delete notification"
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </button>
                                         </div>
                                     </div>
                                     <p className="text-gray-600 leading-relaxed">{note.message}</p>
