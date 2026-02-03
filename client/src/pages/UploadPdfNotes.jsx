@@ -228,6 +228,12 @@ const QUESTION_TYPES = {
 const UploadPdfNotes = () => {
   const [inputType, setInputType] = useState("file"); // 'file' or 'text'
   const [manualSyllabus, setManualSyllabus] = useState("");
+  const [headerDetails, setHeaderDetails] = useState({
+    collegeName: "",
+    examName: "",
+    subjectName: "",
+    year: ""
+  });
   const [rawText, setRawText] = useState("");
   const [topics, setTopics] = useState([]);
   const [paperStructure, setPaperStructure] = useState([]);
@@ -397,6 +403,7 @@ const UploadPdfNotes = () => {
       syllabusTopics: topics,
       paperStructure,
       generatedQuestions,
+      headerDetails,
       totalMarks: paperStructure.reduce((sum, s) => sum + s.totalMarks, 0)
     };
 
@@ -416,94 +423,145 @@ const UploadPdfNotes = () => {
   // ---------------------------
   const downloadPDF = () => {
     const pdf = new jsPDF();
+    const totalMarks = paperStructure.reduce((sum, s) => sum + s.totalMarks, 0);
 
     pdf.addFileToVFS("Outfit-Regular.ttf", OutfitRegular);
     pdf.addFont("Outfit-Regular.ttf", "Outfit", "normal");
     pdf.setFont("Outfit");
 
-    let y = 20;
-    let questionNumber = 1;
+    let y = 15;
 
-    // Title
-    pdf.setFontSize(20);
-    pdf.text("Question Paper", 105, y, { align: "center" });
-    y += 20;
+    // ---------------------------
+    // Professional Header Structure
+    // ---------------------------
+
+    // College Name (Centered, Bold)
+    if (headerDetails.collegeName) {
+      pdf.setFontSize(18);
+      pdf.setFont("Outfit", "bold");
+      const splitCollege = pdf.splitTextToSize(headerDetails.collegeName.toUpperCase(), 180);
+      splitCollege.forEach(line => {
+        pdf.text(line, 105, y, { align: "center" });
+        y += 8;
+      });
+      y += 2;
+    }
+
+    // Exam Name and Year (Centered)
+    if (headerDetails.examName || headerDetails.year) {
+      pdf.setFontSize(14);
+      pdf.setFont("Outfit", "normal");
+      const examStr = `${headerDetails.examName} ${headerDetails.year ? `- ${headerDetails.year}` : ""}`.trim();
+      pdf.text(examStr, 105, y, { align: "center" });
+      y += 10;
+    }
+
+    // Subject Name (Left) and Marks (Right)
+    pdf.setFontSize(12);
+    if (headerDetails.subjectName) {
+      pdf.text(`Subject: ${headerDetails.subjectName}`, 15, y);
+    }
+    pdf.text(`Total Marks: ${totalMarks}`, 195, y, { align: "right" });
+    y += 8;
+
+    // Horizontal Line
+    pdf.setLineWidth(0.5);
+    pdf.line(15, y, 195, y);
+    y += 12;
 
     // Instructions
-    pdf.setFontSize(12);
-    pdf.text("Instructions:", 15, y);
-    y += 10;
+    pdf.setFontSize(11);
+    pdf.setFont("Outfit", "bold");
+    pdf.text("General Instructions:", 15, y);
+    y += 6;
+    pdf.setFont("Outfit", "normal");
     pdf.setFontSize(10);
     const instructions = [
-      "• Attempt all questions.",
-      "• Marks are indicated against each question.",
-      "• Write your answers clearly and neatly."
+      "1. All questions are compulsory.",
+      "2. The question paper consists of " + paperStructure.length + " sections.",
+      "3. Use of calculators is " + (paperStructure.some(s => s.bloomsLevel === 'applying' || s.bloomsLevel === 'analyzing') ? "permitted for complex calculations." : "not permitted."),
+      "4. Figures to the right indicate full marks."
     ];
     instructions.forEach(inst => {
       pdf.text(inst, 20, y);
-      y += 6;
+      y += 5;
     });
     y += 10;
 
-    // Generate content based on output type
+    let questionNumber = 1;
+
+    // Sections and Questions
     generatedQuestions.forEach((section) => {
-      if (y > 250) {
+      if (y > 260) {
         pdf.addPage();
         y = 20;
       }
 
-      // Section Header
-      pdf.setFontSize(14);
-      pdf.text(`${section.section} (${BLOOMS_LEVELS[section.bloomsLevel]})`, 15, y);
-      y += 10;
+      // Section Header (Centered Box)
+      pdf.setFontSize(12);
+      pdf.setFont("Outfit", "bold");
+      const sectionTitle = `${section.section.toUpperCase()} (${BLOOMS_LEVELS[section.bloomsLevel] || section.bloomsLevel})`;
+      const titleWidth = pdf.getTextWidth(sectionTitle);
+      pdf.rect(105 - (titleWidth / 2) - 5, y - 5, titleWidth + 10, 8);
+      pdf.text(sectionTitle, 105, y, { align: "center" });
+      y += 12;
 
-      section.questions.forEach((question, index) => {
-        if (y > 250) {
+      section.questions.forEach((question) => {
+        if (y > 260) {
           pdf.addPage();
           y = 20;
         }
 
-        // Question
+        pdf.setFont("Outfit", "normal");
         pdf.setFontSize(11);
-        let questionText = "";
 
-        if (outputType === "question-paper") {
-          questionText = `${questionNumber}. ${question.question || question.text}`;
-        } else if (outputType === "answer-key") {
-          questionText = `${questionNumber}. ${question.question || question.text}`;
-          if (question.correctAnswer) {
-            questionText += ` [${question.correctAnswer}]`;
-          }
-        } else if (outputType === "questions-answers") {
-          questionText = `${questionNumber}. ${question.question || question.text}`;
+        let questionText = `${questionNumber}. ${question.question || question.text || ""}`;
+        const wrappedQuestion = pdf.splitTextToSize(questionText, 160);
+
+        // Render Question Text
+        pdf.text(wrappedQuestion, 15, y);
+
+        // Render Marks on the same line as the start of the question
+        pdf.setFontSize(10);
+        pdf.text(`[${section.marksPerQuestion}]`, 195, y, { align: "right" });
+
+        y += wrappedQuestion.length * 5 + 2;
+
+        // MCQ Options if available
+        if (section.questionType === 'mcq' && question.options) {
+          pdf.setFontSize(10);
+          const options = Array.isArray(question.options) ? question.options : [];
+          options.forEach((opt, optIdx) => {
+            if (y > 275) { pdf.addPage(); y = 20; }
+            pdf.text(`${String.fromCharCode(97 + optIdx)}) ${opt}`, 25, y);
+            y += 5;
+          });
         }
 
-        const wrappedQuestion = pdf.splitTextToSize(questionText, 180);
-        pdf.text(wrappedQuestion, 15, y);
-        y += wrappedQuestion.length * 5 + 5;
-
-        // Answer (only for questions-answers)
-        if (outputType === "questions-answers" && question.answer) {
-          pdf.setFontSize(10);
+        // Answer / Solution handling (conditional based on outputType)
+        if (outputType !== "question-paper") {
+          y += 2;
+          pdf.setFont("Outfit", "bold");
           pdf.setTextColor(100, 100, 100);
-          const wrappedAnswer = pdf.splitTextToSize(`Answer: ${question.answer}`, 170);
-          pdf.text(wrappedAnswer, 20, y);
-          y += wrappedAnswer.length * 4 + 5;
+
+          if (outputType === "answer-key" && question.correctAnswer) {
+            pdf.text(`Correct Option: ${question.correctAnswer}`, 20, y);
+            y += 6;
+          } else if (outputType === "questions-answers" && question.answer) {
+            const wrappedAnswer = pdf.splitTextToSize(`Solution: ${question.answer}`, 170);
+            pdf.text(wrappedAnswer, 20, y);
+            y += wrappedAnswer.length * 5 + 4;
+          }
           pdf.setTextColor(0, 0, 0);
         }
 
-        // Marks
-        pdf.setFontSize(9);
-        pdf.text(`(${section.marksPerQuestion} marks)`, 180, y - 5);
-        y += 8;
-
+        y += 4;
         questionNumber++;
       });
-
-      y += 10;
+      y += 5;
     });
 
-    const filename = `${outputType.replace("-", "_")}.pdf`;
+    const filename = `${headerDetails.subjectName || outputType}_${Date.now()}.pdf`;
     pdf.save(filename);
   };
 
@@ -580,14 +638,69 @@ const UploadPdfNotes = () => {
         )}
       </div>
 
+      {/* Paper Header Details (Optional) */}
+      <div className="bg-white p-6 rounded-lg shadow-md">
+        <h2 className="text-xl font-semibold mb-6 text-gray-700">Step 2: Paper Header Details <span className="text-sm font-normal text-gray-500">(Optional)</span></h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">College/Institution Name</label>
+            <input
+              type="text"
+              value={headerDetails.collegeName}
+              onChange={(e) => setHeaderDetails({ ...headerDetails, collegeName: e.target.value })}
+              placeholder="e.g., St. Joseph's College of Engineering"
+              className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Examination Name</label>
+            <input
+              type="text"
+              value={headerDetails.examName}
+              onChange={(e) => setHeaderDetails({ ...headerDetails, examName: e.target.value })}
+              placeholder="e.g., Semester End Examinations"
+              className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Subject Name</label>
+            <input
+              type="text"
+              value={headerDetails.subjectName}
+              onChange={(e) => setHeaderDetails({ ...headerDetails, subjectName: e.target.value })}
+              placeholder="e.g., Data Structures and Algorithms"
+              className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Year / Session</label>
+            <input
+              type="text"
+              value={headerDetails.year}
+              onChange={(e) => setHeaderDetails({ ...headerDetails, year: e.target.value })}
+              placeholder="e.g., 2023-2024"
+              className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+            />
+          </div>
+        </div>
+      </div>
+
       {/* Extracted Topics */}
       {topics.length > 0 && (
-        <div className="bg-white p-6 rounded-lg shadow-md">
-          <h2 className="text-xl font-semibold mb-4 text-gray-700">Extracted Topics ({topics.length})</h2>
-          <div className="max-h-40 overflow-y-auto border-2 border-gray-400 rounded p-4 bg-gray-50">
-            <ul className="space-y-2">
+        <div className="bg-white p-6 rounded-lg shadow-md animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="p-2 bg-blue-100 rounded-lg text-blue-600">
+              <BookOpen size={20} />
+            </div>
+            <h2 className="text-xl font-semibold text-gray-700">Extracted Topics ({topics.length})</h2>
+          </div>
+          <div className="max-h-52 overflow-y-auto border-2 border-gray-100 rounded-xl p-4 bg-gray-50/30">
+            <ul className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2">
               {topics.map((topic, i) => (
-                <li key={i} className="text-sm text-gray-700">• {topic}</li>
+                <li key={i} className="text-sm text-gray-600 flex items-start gap-2">
+                  <span className="text-blue-400 font-bold mt-0.5">•</span>
+                  {topic}
+                </li>
               ))}
             </ul>
           </div>
@@ -597,7 +710,7 @@ const UploadPdfNotes = () => {
       {/* Paper Structure Builder */}
       <div className="bg-white p-6 rounded-lg shadow-md">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-semibold text-gray-700">Step 2: Design Paper Structure</h2>
+          <h2 className="text-xl font-semibold text-gray-700">Step 3: Design Paper Structure</h2>
           <button
             onClick={addSection}
             className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
@@ -697,7 +810,7 @@ const UploadPdfNotes = () => {
       {/* Output Type Selection */}
       {paperStructure.length > 0 && (
         <div className="bg-white p-6 rounded-lg shadow-md">
-          <h2 className="text-xl font-semibold mb-4 text-gray-700">Step 3: Select Output Format</h2>
+          <h2 className="text-xl font-semibold mb-4 text-gray-700">Step 4: Select Output Format</h2>
           <div className="flex gap-4 justify-center">
             {[
               { value: "question-paper", label: "Question Paper", icon: FileText },
