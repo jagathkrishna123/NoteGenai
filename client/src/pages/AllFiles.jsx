@@ -28,8 +28,14 @@ const AllFiles = () => {
 
   // Load saved files from localStorage
   useEffect(() => {
-    const files = JSON.parse(localStorage.getItem('questionPapers') || '[]');
-    setSavedFiles(files);
+    const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+    if (currentUser) {
+      const allFiles = JSON.parse(localStorage.getItem('questionPapers') || '[]');
+      const userFiles = allFiles.filter(file => file.userId === currentUser.id);
+      setSavedFiles(userFiles);
+    } else {
+      setSavedFiles([]);
+    }
   }, []);
 
   // Delete a file

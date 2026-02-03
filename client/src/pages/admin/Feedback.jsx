@@ -5,67 +5,14 @@ const Feedback = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filter, setFilter] = useState('all');
 
-  const [feedbacks] = useState([
-    {
-      id: 1,
-      user: 'John Doe',
-      email: 'john@example.com',
-      rating: 5,
-      message: 'Great platform! The note generation feature is incredibly helpful for my studies.',
-      category: 'Feature',
-      status: 'unread',
-      date: '2024-01-16',
-      response: null
-    },
-    {
-      id: 2,
-      user: 'Jane Smith',
-      email: 'jane@example.com',
-      rating: 4,
-      message: 'Love the interface, but it would be nice to have more customization options for the generated notes.',
-      category: 'UI/UX',
-      status: 'responded',
-      date: '2024-01-15',
-      response: 'Thank you for your feedback! We\'re working on adding more customization options in our next update.'
-    },
-    {
-      id: 3,
-      user: 'Bob Johnson',
-      email: 'bob@example.com',
-      rating: 3,
-      message: 'The upload feature sometimes fails with large PDF files. Could you increase the file size limit?',
-      category: 'Bug',
-      status: 'pending',
-      date: '2024-01-14',
-      response: null
-    },
-    {
-      id: 4,
-      user: 'Alice Brown',
-      email: 'alice@example.com',
-      rating: 5,
-      message: 'Excellent customer support! The team was very helpful when I had issues with my account.',
-      category: 'Support',
-      status: 'archived',
-      date: '2024-01-13',
-      response: 'We\'re glad we could help! Your feedback means a lot to us.'
-    },
-    {
-      id: 5,
-      user: 'Charlie Wilson',
-      email: 'charlie@example.com',
-      rating: 2,
-      message: 'The app is slow to load and sometimes crashes. Please improve performance.',
-      category: 'Performance',
-      status: 'unread',
-      date: '2024-01-12',
-      response: null
-    }
-  ]);
+  const [feedbacks, setFeedbacks] = useState(() => {
+    const saved = localStorage.getItem('feedbacks');
+    return saved ? JSON.parse(saved) : [];
+  });
 
   const filteredFeedbacks = feedbacks.filter(feedback => {
     const matchesSearch = feedback.user.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         feedback.message.toLowerCase().includes(searchTerm.toLowerCase());
+      feedback.message.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesFilter = filter === 'all' || feedback.status === filter;
     return matchesSearch && matchesFilter;
   });

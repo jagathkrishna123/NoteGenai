@@ -1,29 +1,3 @@
-// import React from 'react'
-// import { Route, Routes } from 'react-router-dom'
-// import Home from './pages/Home'
-// import Layout from './pages/Layout'
-// import Dashboard from './pages/Dashboard'
-// import NoteGenPage from './pages/NoteGenPage'
-// import Login from './pages/Login'
-
-// const App = () => {
-//   return (
-//     <>
-//       <Routes>
-//         <Route path='/' element={<Home/>}/>
-//         <Route path='app' element={<Layout/>}>
-//           <Route index element={<Dashboard/>}/>
-//           <Route path='notegen/:noteId' element={<NoteGenPage/>}/>
-//         </Route>
-
-        
-//         <Route path='login' element={<Login/>}/>
-//       </Routes>
-//     </>
-//   )
-// }
-
-// export default App
 
 import React from "react";
 import { Route, Routes } from "react-router-dom";
@@ -41,6 +15,8 @@ import UserManagement from "./pages/admin/UserManagement";
 import Feedback from "./pages/admin/Feedback";
 import Broadcast from "./pages/admin/Broadcast";
 import ChatBot from "./pages/ChatBot";
+import UserFeedback from "./pages/UserFeedback";
+import Notification from "./pages/Notification";
 
 const App = () => {
   return (
@@ -53,6 +29,8 @@ const App = () => {
           <Route path="uploadfile" element={<UploadPdfNotes/>} />
           <Route path="allfiles" element={<AllFiles/>} />
           <Route path="chatbot" element={<ChatBot/>} />
+          <Route path="feedbacks" element={<UserFeedback/>} />
+          <Route path="notification" element={<Notification/>} />
 
           {/* CREATE / EDIT NOTE */}
           <Route path="notegen/:id" element={<NoteGenPage />} />

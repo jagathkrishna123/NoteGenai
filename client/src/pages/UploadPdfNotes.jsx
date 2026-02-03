@@ -226,6 +226,8 @@ const QUESTION_TYPES = {
 };
 
 const UploadPdfNotes = () => {
+  const [inputType, setInputType] = useState("file"); // 'file' or 'text'
+  const [manualSyllabus, setManualSyllabus] = useState("");
   const [rawText, setRawText] = useState("");
   const [topics, setTopics] = useState([]);
   const [paperStructure, setPaperStructure] = useState([]);
@@ -267,6 +269,12 @@ const UploadPdfNotes = () => {
     };
 
     reader.readAsArrayBuffer(file);
+  };
+
+  const handleManualSyllabusSubmit = () => {
+    if (!manualSyllabus.trim()) return;
+    setRawText(manualSyllabus);
+    extractTopics(manualSyllabus);
   };
 
   // ---------------------------
@@ -372,10 +380,17 @@ const UploadPdfNotes = () => {
   // 5️⃣ Save to LocalStorage
   // ---------------------------
   const saveToLocalStorage = () => {
+    const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+    if (!currentUser) {
+      alert('Please login to save files');
+      return;
+    }
+
     const savedFiles = JSON.parse(localStorage.getItem('questionPapers') || '[]');
 
     const fileData = {
       id: Date.now().toString(),
+      userId: currentUser.id,
       title: `${outputType.replace("-", " ").toUpperCase()} - ${new Date().toLocaleDateString()}`,
       outputType,
       createdAt: new Date().toISOString(),
@@ -501,16 +516,68 @@ const UploadPdfNotes = () => {
         Syllabus to Question Paper Generator
       </h1>
 
-      {/* PDF Upload Section */}
+      {/* Step 1: Syllabus Input */}
       <div className="bg-white p-6 rounded-lg shadow-md">
-        <h2 className="text-xl font-semibold mb-4 text-gray-700">Step 1: Upload Syllabus PDF</h2>
-        <input
-          type="file"
-          accept="application/pdf"
-          onChange={handlePdfUpload}
-          className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:border border-blue-500 file:text-blue-700 hover:file:bg-blue-100"
-        />
-        {loadingPdf && <p className="mt-2 text-blue-600">Reading PDF...</p>}
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-semibold text-gray-700">Step 1: Provide Syllabus</h2>
+          <div className="flex bg-gray-100 p-1 rounded-lg">
+            <button
+              onClick={() => setInputType("file")}
+              className={`px-4 py-2 rounded-md transition-all text-sm font-medium ${inputType === "file" ? "bg-white text-blue-600 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
+            >
+              Upload PDF
+            </button>
+            <button
+              onClick={() => setInputType("text")}
+              className={`px-4 py-2 rounded-md transition-all text-sm font-medium ${inputType === "text" ? "bg-white text-blue-600 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
+            >
+              Manual Input
+            </button>
+          </div>
+        </div>
+
+        {inputType === "file" ? (
+          <div className="space-y-4">
+            <label className="block p-8 border-2 border-dashed border-gray-200 rounded-xl hover:border-blue-400 transition-colors cursor-pointer group bg-gray-50/50">
+              <input
+                type="file"
+                accept="application/pdf"
+                onChange={handlePdfUpload}
+                className="hidden"
+              />
+              <div className="flex flex-col items-center text-center">
+                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                  <FileText className="w-6 h-6 text-blue-600" />
+                </div>
+                <p className="text-gray-700 font-medium mb-1">Click to upload syllabus PDF</p>
+                <p className="text-sm text-gray-500">Only PDF files are supported</p>
+              </div>
+            </label>
+            {loadingPdf && (
+              <div className="flex items-center justify-center gap-3 text-blue-600 font-medium">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                Reading PDF...
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <textarea
+              value={manualSyllabus}
+              onChange={(e) => setManualSyllabus(e.target.value)}
+              placeholder="Paste your syllabus text here... For best results, include each topic on a new line."
+              rows={8}
+              className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none resize-none bg-gray-50/50 transition-all"
+            />
+            <button
+              onClick={handleManualSyllabusSubmit}
+              disabled={!manualSyllabus.trim()}
+              className="w-full py-3 bg-blue-600 text-white rounded-lg font-bold shadow-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-all transform hover:-translate-y-0.5 active:translate-y-0"
+            >
+              Process Syllabus
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Extracted Topics */}
@@ -640,11 +707,10 @@ const UploadPdfNotes = () => {
               <button
                 key={value}
                 onClick={() => setOutputType(value)}
-                className={`flex items-center gap-2 px-6 py-3 rounded-lg border-2 transition-colors ${
-                  outputType === value
-                    ? "border-blue-600 bg-blue-50 text-blue-700"
-                    : "border-gray-300 hover:border-gray-400"
-                }`}
+                className={`flex items-center gap-2 px-6 py-3 rounded-lg border-2 transition-colors ${outputType === value
+                  ? "border-blue-600 bg-blue-50 text-blue-700"
+                  : "border-gray-300 hover:border-gray-400"
+                  }`}
               >
                 <Icon size={20} />
                 {label}

@@ -1,55 +1,60 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Users, Search, Edit, Trash2, UserCheck, UserX } from 'lucide-react';
 
 const UserManagement = () => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [users] = useState([
-    {
-      id: 1,
-      name: 'John Doe',
-      email: 'john@example.com',
-      role: 'User',
-      status: 'Active',
-      joinDate: '2024-01-15',
-      notesCount: 23
-    },
-    {
-      id: 2,
-      name: 'Jane Smith',
-      email: 'jane@example.com',
-      role: 'Premium',
-      status: 'Active',
-      joinDate: '2024-01-10',
-      notesCount: 45
-    },
-    {
-      id: 3,
-      name: 'Bob Johnson',
-      email: 'bob@example.com',
-      role: 'User',
-      status: 'Inactive',
-      joinDate: '2024-01-05',
-      notesCount: 12
-    },
-    {
-      id: 4,
-      name: 'Alice Brown',
-      email: 'alice@example.com',
-      role: 'Premium',
-      status: 'Active',
-      joinDate: '2023-12-20',
-      notesCount: 67
-    },
-    {
-      id: 5,
-      name: 'Charlie Wilson',
-      email: 'charlie@example.com',
-      role: 'User',
-      status: 'Active',
-      joinDate: '2023-12-15',
-      notesCount: 8
-    }
-  ]);
+  const [users, setUsers] = useState([]);
+
+  useEffect(() => {
+    // Load data from localStorage
+    const savedUsers = JSON.parse(localStorage.getItem('users') || '[]');
+    const savedNotes = JSON.parse(localStorage.getItem('notes') || '[]');
+    const savedPapers = JSON.parse(localStorage.getItem('questionPapers') || '[]');
+
+    // Enrich users with counts
+    const enrichedUsers = savedUsers.map(user => {
+      const userNotes = savedNotes.filter(n => n.userId === user.id).length;
+      const userPapers = savedPapers.filter(p => p.userId === user.id).length;
+      return {
+        ...user,
+        notesCount: userNotes + userPapers,
+        joinDate: new Date(user.id).toLocaleDateString(), // Assuming id is timestamp
+        status: user.isBlocked ? 'Blocked' : 'Active'
+      };
+    });
+
+    setUsers(enrichedUsers);
+  }, []);
+
+  const toggleBlockUser = (userId) => {
+    const allUsers = JSON.parse(localStorage.getItem('users') || '[]');
+    const updatedUsers = allUsers.map(user => {
+      if (user.id === userId) {
+        return { ...user, isBlocked: !user.isBlocked };
+      }
+      return user;
+    });
+
+    localStorage.setItem('users', JSON.stringify(updatedUsers));
+
+    // Refresh local state
+    setUsers(prev => prev.map(u => {
+      if (u.id === userId) {
+        const newIsBlocked = !u.isBlocked;
+        return { ...u, isBlocked: newIsBlocked, status: newIsBlocked ? 'Blocked' : 'Active' };
+      }
+      return u;
+    }));
+  };
+
+  const deleteUser = (userId) => {
+    if (!window.confirm('Are you sure you want to delete this user?')) return;
+
+    const allUsers = JSON.parse(localStorage.getItem('users') || '[]');
+    const updatedUsers = allUsers.filter(u => u.id !== userId);
+    localStorage.setItem('users', JSON.stringify(updatedUsers));
+    setUsers(prev => prev.filter(u => u.id !== userId));
+  };
 
   const filteredUsers = users.filter(user =>
     user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -80,9 +85,6 @@ const UserManagement = () => {
             <button className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">
               Export Users
             </button>
-            <button className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors">
-              Add User
-            </button>
           </div>
         </div>
       </div>
@@ -96,103 +98,85 @@ const UserManagement = () => {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   User
                 </th>
-                {/* <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Role
-                </th> */}
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Status
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Notes Count
+                  Total Content
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Join Date
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
+                  Action
                 </th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {filteredUsers.map((user) => (
-                <tr key={user.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
-                        <span className="text-white font-medium text-sm">
-                          {user.name.split(' ').map(n => n[0]).join('')}
-                        </span>
+              {filteredUsers.length > 0 ? (
+                filteredUsers.map((user) => (
+                  <tr key={user.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
+                          <span className="text-white font-medium text-sm">
+                            {user.name ? user.name.split(' ').map(n => n[0]).join('') : 'U'}
+                          </span>
+                        </div>
+                        <div className="ml-4">
+                          <div className="text-sm font-medium text-gray-900">{user.name}</div>
+                          <div className="text-sm text-gray-500">{user.email}</div>
+                        </div>
                       </div>
-                      <div className="ml-4">
-                        <div className="text-sm font-medium text-gray-900">{user.name}</div>
-                        <div className="text-sm text-gray-500">{user.email}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${user.status === 'Active'
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-red-100 text-red-800'
+                        }`}>
+                        {user.status}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-center">
+                      {user.notesCount}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {user.joinDate}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <div className="flex space-x-4">
+                        <button
+                          onClick={() => toggleBlockUser(user.id)}
+                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-colors ${user.status === 'Active'
+                              ? 'text-red-600 bg-red-50 hover:bg-red-100 border border-red-200'
+                              : 'text-green-600 bg-green-50 hover:bg-green-100 border border-green-200'
+                            }`}
+                        >
+                          {user.status === 'Active' ? (
+                            <><UserX className="w-4 h-4" /> Block</>
+                          ) : (
+                            <><UserCheck className="w-4 h-4" /> Unblock</>
+                          )}
+                        </button>
+                        <button
+                          onClick={() => deleteUser(user.id)}
+                          className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
                       </div>
-                    </div>
-                  </td>
-                  {/* <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                      user.role === 'Premium'
-                        ? 'bg-purple-100 text-purple-800'
-                        : 'bg-gray-100 text-gray-800'
-                    }`}>
-                      {user.role}
-                    </span>
-                  </td> */}
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                      user.status === 'Active'
-                        ? 'bg-green-100 text-green-800'
-                        : 'bg-red-100 text-red-800'
-                    }`}>
-                      {user.status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {user.notesCount}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {user.joinDate}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <div className="flex space-x-2">
-                      <button className="text-blue-600 hover:text-blue-900">
-                        <Edit className="w-4 h-4" />
-                      </button>
-                      <button className={`${
-                        user.status === 'Active' ? 'text-red-600 hover:text-red-900' : 'text-green-600 hover:text-green-900'
-                      }`}>
-                        {user.status === 'Active' ? <UserX className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />}
-                      </button>
-                      <button className="text-gray-600 hover:text-gray-900">
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="5" className="px-6 py-12 text-center text-gray-500 text-sm">
+                    No users found matching your search.
                   </td>
                 </tr>
-              ))}
+              )}
             </tbody>
           </table>
-        </div>
-      </div>
-
-      {/* Pagination */}
-      <div className="bg-white px-6 py-4 border-t border-gray-200">
-        <div className="flex items-center justify-between">
-          <div className="text-sm text-gray-700">
-            Showing <span className="font-medium">1</span> to <span className="font-medium">{filteredUsers.length}</span> of{' '}
-            <span className="font-medium">{users.length}</span> results
-          </div>
-          <div className="flex space-x-2">
-            <button className="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-50">
-              Previous
-            </button>
-            <button className="px-3 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600">
-              1
-            </button>
-            <button className="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-50">
-              Next
-            </button>
-          </div>
         </div>
       </div>
     </div>
@@ -200,3 +184,4 @@ const UserManagement = () => {
 };
 
 export default UserManagement;
+

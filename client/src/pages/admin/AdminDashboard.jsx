@@ -1,37 +1,100 @@
-import React from 'react';
-import { Users, FileText, MessageSquare, TrendingUp } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Users, FileText, MessageSquare, TrendingUp, Clock } from 'lucide-react';
 
 const AdminDashboard = () => {
-  const stats = [
-    {
-      title: 'Total Users',
-      value: '1,234',
-      icon: Users,
-      color: 'bg-blue-500',
-      change: '+12%'
-    },
-    {
-      title: 'Total Notes',
-      value: '5,678',
-      icon: FileText,
-      color: 'bg-green-500',
-      change: '+8%'
-    },
-    {
-      title: 'Feedback Messages',
-      value: '89',
-      icon: MessageSquare,
-      color: 'bg-yellow-500',
-      change: '+23%'
-    },
-    {
-      title: 'Growth Rate',
-      value: '15.3%',
-      icon: TrendingUp,
-      color: 'bg-purple-500',
-      change: '+5%'
-    }
-  ];
+  const [stats, setStats] = useState([]);
+  const [recentActivity, setRecentActivity] = useState([]);
+
+  useEffect(() => {
+    // Fetch data from localStorage
+    const users = JSON.parse(localStorage.getItem('users') || '[]');
+    const notes = JSON.parse(localStorage.getItem('notes') || '[]');
+    const questionPapers = JSON.parse(localStorage.getItem('questionPapers') || '[]');
+    const feedbacks = JSON.parse(localStorage.getItem('feedbacks') || '[]');
+
+    // Calculate Stats
+    const totalUsers = users.length;
+    const totalNotes = notes.length + questionPapers.length;
+    const totalFeedback = feedbacks.length;
+
+    setStats([
+      {
+        title: 'Total Users',
+        value: totalUsers.toLocaleString(),
+        icon: Users,
+        color: 'bg-blue-500',
+        change: '+0%' // Placeholder for now
+      },
+      {
+        title: 'Total Content',
+        value: totalNotes.toLocaleString(),
+        icon: FileText,
+        color: 'bg-green-500',
+        change: '+0%'
+      },
+      {
+        title: 'Feedback Messages',
+        value: totalFeedback.toLocaleString(),
+        icon: MessageSquare,
+        color: 'bg-yellow-500',
+        change: '+0%'
+      },
+      {
+        title: 'Question Papers',
+        value: questionPapers.length.toLocaleString(),
+        icon: FileText,
+        color: 'bg-purple-500',
+        change: '+0%'
+      }
+    ]);
+
+    // Consolidate Activity
+    const activities = [
+      ...users.map(u => ({
+        type: 'user',
+        title: 'New user registered',
+        description: `${u.name} joined the platform`,
+        timestamp: u.id, // Assuming id is Date.now()
+        icon: Users,
+        color: 'bg-blue-500'
+      })),
+      ...notes.map(n => ({
+        type: 'note',
+        title: 'New note created',
+        description: n.title,
+        timestamp: new Date(n.createdAt || n.updatedAt).getTime(),
+        icon: FileText,
+        color: 'bg-green-500'
+      })),
+      ...questionPapers.map(qp => ({
+        type: 'paper',
+        title: 'New question paper',
+        description: qp.title,
+        timestamp: new Date(qp.createdAt).getTime(),
+        icon: FileText,
+        color: 'bg-purple-500'
+      }))
+    ];
+
+    // Sort by most recent
+    const sortedActivity = activities
+      .sort((a, b) => b.timestamp - a.timestamp)
+      .slice(0, 5); // Show last 5
+
+    setRecentActivity(sortedActivity);
+  }, []);
+
+  const formatTimeAgo = (timestamp) => {
+    const diff = Date.now() - timestamp;
+    const minutes = Math.floor(diff / 60000);
+    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(hours / 24);
+
+    if (days > 0) return `${days} day${days > 1 ? 's' : ''} ago`;
+    if (hours > 0) return `${hours} hour${hours > 1 ? 's' : ''} ago`;
+    if (minutes > 0) return `${minutes} minute${minutes > 1 ? 's' : ''} ago`;
+    return 'Just now';
+  };
 
   return (
     <div className="p-8">
@@ -62,38 +125,25 @@ const AdminDashboard = () => {
       <div className="bg-white rounded-lg shadow-md p-6">
         <h2 className="text-xl font-semibold text-gray-800 mb-4">Recent Activity</h2>
         <div className="space-y-4">
-          <div className="flex items-center space-x-4 p-4 border border-gray-200 rounded-lg">
-            <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
-              <Users className="w-5 h-5 text-white" />
-            </div>
-            <div className="flex-1">
-              <p className="text-sm font-medium text-gray-900">New user registered</p>
-              <p className="text-sm text-gray-500">John Doe joined the platform</p>
-            </div>
-            <span className="text-sm text-gray-400">2 hours ago</span>
-          </div>
-
-          <div className="flex items-center space-x-4 p-4 border border-gray-200 rounded-lg">
-            <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center">
-              <FileText className="w-5 h-5 text-white" />
-            </div>
-            <div className="flex-1">
-              <p className="text-sm font-medium text-gray-900">New note created</p>
-              <p className="text-sm text-gray-500">Machine Learning study notes uploaded</p>
-            </div>
-            <span className="text-sm text-gray-400">4 hours ago</span>
-          </div>
-
-          <div className="flex items-center space-x-4 p-4 border border-gray-200 rounded-lg">
-            <div className="w-10 h-10 bg-yellow-500 rounded-full flex items-center justify-center">
-              <MessageSquare className="w-5 h-5 text-white" />
-            </div>
-            <div className="flex-1">
-              <p className="text-sm font-medium text-gray-900">New feedback received</p>
-              <p className="text-sm text-gray-500">User feedback about the note generation feature</p>
-            </div>
-            <span className="text-sm text-gray-400">6 hours ago</span>
-          </div>
+          {recentActivity.length > 0 ? (
+            recentActivity.map((activity, index) => (
+              <div key={index} className="flex items-center space-x-4 p-4 border border-gray-200 rounded-lg">
+                <div className={`w-10 h-10 ${activity.color} rounded-full flex items-center justify-center`}>
+                  <activity.icon className="w-5 h-5 text-white" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-gray-900">{activity.title}</p>
+                  <p className="text-sm text-gray-500">{activity.description}</p>
+                </div>
+                <div className="flex items-center text-sm text-gray-400">
+                  <Clock className="w-4 h-4 mr-1" />
+                  {formatTimeAgo(activity.timestamp)}
+                </div>
+              </div>
+            ))
+          ) : (
+            <p className="text-gray-500 text-center py-4">No recent activity found.</p>
+          )}
         </div>
       </div>
     </div>

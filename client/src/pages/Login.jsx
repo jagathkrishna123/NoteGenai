@@ -1,9 +1,11 @@
 import { Lock, Mail, User2Icon } from 'lucide-react'
 import React, { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useNotes } from '../context/NotesContext'
 
 const Login = () => {
     const navigate = useNavigate()
+    const { refreshUser } = useNotes()
     const query = new URLSearchParams(window.location.search)
     const urlState = query.get('state')
     const [state, setState] = React.useState(urlState || "login")
@@ -23,6 +25,15 @@ const Login = () => {
     const handleSubmit = async (e) => {
         e.preventDefault()
 
+        // Admin Login Check
+        if (formData.email === 'admin@gmail.com' && formData.password === 'admin123') {
+            const adminUser = { name: 'Admin', email: 'admin@gmail.com', id: 'admin', role: 'admin' }
+            localStorage.setItem('currentUser', JSON.stringify(adminUser))
+            refreshUser()
+            navigate('/admin')
+            return
+        }
+
         const users = JSON.parse(localStorage.getItem('users') || '[]')
 
         if (state === 'register') {
@@ -35,11 +46,13 @@ const Login = () => {
             users.push(newUser)
             localStorage.setItem('users', JSON.stringify(users))
             localStorage.setItem('currentUser', JSON.stringify(newUser))
+            refreshUser()
             navigate('/app')
         } else {
             const user = users.find(u => u.email === formData.email && u.password === formData.password)
             if (user) {
                 localStorage.setItem('currentUser', JSON.stringify(user))
+                refreshUser()
                 navigate('/app')
             } else {
                 alert('Invalid credentials')

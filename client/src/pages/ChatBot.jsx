@@ -2,17 +2,38 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Send, Bot, User, Loader2 } from 'lucide-react';
 
 const ChatBot = () => {
-  const [messages, setMessages] = useState([
-    {
-      id: 1,
-      type: 'ai',
-      content: 'Hello! I\'m your AI assistant. I can help you with questions about any topic - science, technology, programming, history, mathematics, or general knowledge. What would you like to know?',
-      timestamp: new Date()
-    }
-  ]);
+  const [messages, setMessages] = useState([]);
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [userId, setUserId] = useState(null);
   const messagesEndRef = useRef(null);
+
+  // Get current user and load messages
+  useEffect(() => {
+    const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+    if (currentUser) {
+      setUserId(currentUser.id);
+      const allChats = JSON.parse(localStorage.getItem('chatHistory') || '{}');
+      const userChats = allChats[currentUser.id] || [
+        {
+          id: 1,
+          type: 'ai',
+          content: `Hello ${currentUser.name}! I'm your AI assistant. I can help you with questions about any topic - science, technology, programming, history, mathematics, or general knowledge. What would you like to know?`,
+          timestamp: new Date().toISOString()
+        }
+      ];
+      setMessages(userChats);
+    }
+  }, []);
+
+  // Persist messages when they change
+  useEffect(() => {
+    if (userId && messages.length > 0) {
+      const allChats = JSON.parse(localStorage.getItem('chatHistory') || '{}');
+      allChats[userId] = messages;
+      localStorage.setItem('chatHistory', JSON.stringify(allChats));
+    }
+  }, [messages, userId]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -31,7 +52,7 @@ const ChatBot = () => {
       id: messages.length + 1,
       type: 'user',
       content: inputMessage.trim(),
-      timestamp: new Date()
+      timestamp: new Date().toISOString()
     };
 
     setMessages(prev => [...prev, userMessage]);
@@ -65,7 +86,7 @@ const ChatBot = () => {
         id: messages.length + 2,
         type: 'ai',
         content: data.response,
-        timestamp: new Date()
+        timestamp: new Date().toISOString()
       };
 
       setMessages(prev => [...prev, aiMessage]);
@@ -75,7 +96,7 @@ const ChatBot = () => {
         id: messages.length + 2,
         type: 'ai',
         content: 'Sorry, I encountered an error. Please try again.',
-        timestamp: new Date()
+        timestamp: new Date().toISOString()
       };
       setMessages(prev => [...prev, errorMessage]);
     } finally {
@@ -84,7 +105,9 @@ const ChatBot = () => {
   };
 
   const formatTime = (date) => {
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    // Ensure date is a Date object (if loaded from localStorage, it will be a string)
+    const d = typeof date === 'string' ? new Date(date) : date;
+    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
   return (
@@ -110,11 +133,10 @@ const ChatBot = () => {
             className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
           >
             <div
-              className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
-                message.type === 'user'
-                  ? 'bg-blue-500 text-white'
-                  : 'bg-white border border-gray-200 text-gray-800'
-              }`}
+              className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${message.type === 'user'
+                ? 'bg-blue-500 text-white'
+                : 'bg-white border border-gray-200 text-gray-800'
+                }`}
             >
               <div className="flex items-center space-x-2 mb-1">
                 {message.type === 'user' ? (
@@ -160,11 +182,10 @@ const ChatBot = () => {
           <button
             type="submit"
             disabled={!inputMessage.trim() || isLoading}
-            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-              !inputMessage.trim() || isLoading
-                ? 'bg-gray-300 cursor-not-allowed'
-                : 'bg-blue-500 hover:bg-blue-600 text-white'
-            }`}
+            className={`px-4 py-2 rounded-lg font-medium transition-colors ${!inputMessage.trim() || isLoading
+              ? 'bg-gray-300 cursor-not-allowed'
+              : 'bg-blue-500 hover:bg-blue-600 text-white'
+              }`}
           >
             <Send className="w-5 h-5" />
           </button>

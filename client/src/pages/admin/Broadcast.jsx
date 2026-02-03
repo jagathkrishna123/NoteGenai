@@ -7,32 +7,12 @@ const Broadcast = () => {
   const [message, setMessage] = useState('');
   const [subject, setSubject] = useState('');
   const [isSending, setIsSending] = useState(false);
-  const [sentBroadcasts, setSentBroadcasts] = useState([
-    {
-      id: 1,
-      subject: 'System Maintenance Notice',
-      message: 'The system will be under maintenance from 2 AM to 4 AM tomorrow.',
-      recipients: 'All Users',
-      sentAt: '2024-01-15 14:30',
-      status: 'sent'
-    },
-    {
-      id: 2,
-      subject: 'New Feature Announcement',
-      message: 'We\'ve added a new AI-powered note generation feature!',
-      recipients: 'Premium Users',
-      sentAt: '2024-01-14 10:15',
-      status: 'sent'
-    }
-  ]);
+  const [sentBroadcasts, setSentBroadcasts] = useState(() => {
+    const saved = localStorage.getItem('broadcasts');
+    return saved ? JSON.parse(saved) : [];
+  });
 
-  const [users] = useState([
-    { id: 1, name: 'John Doe', email: 'john@example.com', role: 'User' },
-    { id: 2, name: 'Jane Smith', email: 'jane@example.com', role: 'Premium' },
-    { id: 3, name: 'Bob Johnson', email: 'bob@example.com', role: 'User' },
-    { id: 4, name: 'Alice Brown', email: 'alice@example.com', role: 'Premium' },
-    { id: 5, name: 'Charlie Wilson', email: 'charlie@example.com', role: 'User' }
-  ]);
+  const users = JSON.parse(localStorage.getItem('users') || '[]');
 
   const handleUserSelect = (userId) => {
     setSelectedUsers(prev =>
@@ -56,18 +36,23 @@ const Broadcast = () => {
     setIsSending(true);
 
     // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    await new Promise(resolve => setTimeout(resolve, 1000));
 
     const newBroadcast = {
-      id: sentBroadcasts.length + 1,
+      id: Date.now(),
       subject,
       message,
+      type: broadcastType,
+      targetUserIds: broadcastType === 'specific' ? selectedUsers : [],
       recipients: broadcastType === 'all' ? 'All Users' : `Selected Users (${selectedUsers.length})`,
       sentAt: new Date().toLocaleString(),
       status: 'sent'
     };
 
-    setSentBroadcasts(prev => [newBroadcast, ...prev]);
+    const updatedBroadcasts = [newBroadcast, ...sentBroadcasts];
+    setSentBroadcasts(updatedBroadcasts);
+    localStorage.setItem('broadcasts', JSON.stringify(updatedBroadcasts));
+
     setSubject('');
     setMessage('');
     setSelectedUsers([]);
@@ -143,9 +128,8 @@ const Broadcast = () => {
                         <div className="text-sm font-medium text-gray-900">{user.name}</div>
                         <div className="text-xs text-gray-500">{user.email}</div>
                       </div>
-                      <span className={`ml-auto px-2 py-1 text-xs rounded-full ${
-                        user.role === 'Premium' ? 'bg-purple-100 text-purple-800' : 'bg-gray-100 text-gray-800'
-                      }`}>
+                      <span className={`ml-auto px-2 py-1 text-xs rounded-full ${user.role === 'Premium' ? 'bg-purple-100 text-purple-800' : 'bg-gray-100 text-gray-800'
+                        }`}>
                         {user.role}
                       </span>
                     </div>
@@ -183,11 +167,10 @@ const Broadcast = () => {
           <button
             onClick={handleSendBroadcast}
             disabled={isSending}
-            className={`w-full flex items-center justify-center px-4 py-3 rounded-lg font-medium transition-colors ${
-              isSending
+            className={`w-full flex items-center justify-center px-4 py-3 rounded-lg font-medium transition-colors ${isSending
                 ? 'bg-gray-400 cursor-not-allowed'
                 : 'bg-blue-500 hover:bg-blue-600 text-white'
-            }`}
+              }`}
           >
             {isSending ? (
               <>
